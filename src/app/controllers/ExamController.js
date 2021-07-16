@@ -1,8 +1,8 @@
-const { Laboratory, Exam } = require('../models');
+const { Exam, Laboratory } = require('../models');
 
 module.exports = {
   async store(req, res) {
-    const { name, address } = req.body;
+    const { name, type } = req.body;
 
     if (!name) {
       return res.status(400).json({
@@ -10,29 +10,29 @@ module.exports = {
       });
     }
 
-    if (!address) {
+    if (!type) {
       return res.status(400).json({
-        message: 'address is required',
+        message: 'type is required',
       });
     }
 
-    const laboratoryFound = await Laboratory.findOne({
-      where: { name, address },
+    const examFound = await Exam.findOne({
+      where: { name, type },
     });
 
-    if (laboratoryFound) {
+    if (examFound) {
       return res.status(400).json({
-        message: `laboratory ${laboratoryFound.name} already exists`,
+        message: `exam ${examFound.name} already exists`,
       });
     }
 
     try {
-      const laboratory = await Laboratory.create({
+      const exam = await Exam.create({
         name,
-        address,
+        type,
       });
 
-      return res.status(201).json(laboratory);
+      return res.status(201).json(exam);
     } catch (error) {
       return res.status(500).send(error);
     }
@@ -40,7 +40,7 @@ module.exports = {
 
   async index(req, res) {
     try {
-      const laboratories = await Laboratory.findAll({
+      const exams = await Exam.findAll({
         attributes: { exclude: ['status'] },
         where: {
           status: true,
@@ -48,13 +48,11 @@ module.exports = {
         order: [['name', 'ASC']],
       });
 
-      if (!laboratories || laboratories.length === 0) {
-        return res
-          .status(404)
-          .json({ message: 'no laboratory found' });
+      if (!exams || exams.length === 0) {
+        return res.status(404).json({ message: 'no exam found' });
       }
 
-      return res.status(200).json(laboratories);
+      return res.status(200).json(exams);
     } catch (error) {
       if (error.message) {
         return res.status(500).json({ message: error.message });
@@ -68,24 +66,22 @@ module.exports = {
     try {
       const { id } = req.params;
 
-      const laboratory = await Laboratory.findOne({
+      const exam = await Exam.findOne({
         where: {
           id,
           status: true,
         },
         include: {
-          association: 'exams',
+          association: 'laboratories',
           through: { attributes: [] },
         },
       });
 
-      if (!laboratory) {
-        return res
-          .status(404)
-          .json({ message: 'laboratory not found' });
+      if (!exam) {
+        return res.status(404).json({ message: 'exam not found' });
       }
 
-      return res.status(200).json(laboratory);
+      return res.status(200).json(exam);
     } catch (error) {
       if (error.message) {
         return res.status(500).json({ message: error.message });
@@ -101,19 +97,17 @@ module.exports = {
 
       delete req.body.status;
 
-      const isUpdated = await Laboratory.update(req.body, {
+      const isUpdated = await Exam.update(req.body, {
         where: { id, status: true },
       });
 
       if (!isUpdated || isUpdated[0] === 0) {
-        return res
-          .status(404)
-          .json({ message: 'laboratory not found' });
+        return res.status(404).json({ message: 'exam not found' });
       }
 
-      const laboratoryUpdated = await Laboratory.findByPk(id);
+      const examUpdated = await Exam.findByPk(id);
 
-      return res.status(200).json(laboratoryUpdated);
+      return res.status(200).json(examUpdated);
     } catch (error) {
       if (error.message) {
         return res.status(500).json({ message: error.message });
@@ -127,22 +121,20 @@ module.exports = {
     try {
       const { id } = req.params;
 
-      const laboratory = await Laboratory.findOne({
+      const exam = await Exam.findOne({
         where: {
           id,
           status: true,
         },
       });
 
-      if (!laboratory) {
-        return res
-          .status(404)
-          .json({ message: 'laboratory not found' });
+      if (!exam) {
+        return res.status(404).json({ message: 'exam not found' });
       }
 
-      await Laboratory.update({ status: false }, { where: { id } });
+      await Exam.update({ status: false }, { where: { id } });
 
-      await laboratory.setExams([]);
+      await exam.setLaboratories([]);
 
       return res.sendStatus(204);
     } catch (error) {
@@ -157,61 +149,59 @@ module.exports = {
   async associate(req, res) {
     try {
       const { id } = req.params;
-      const { exam_ids } = req.body;
+      const { laboratory_ids } = req.body;
 
-      if (!exam_ids || !Array.isArray(exam_ids)) {
+      if (!laboratory_ids || !Array.isArray(laboratory_ids)) {
         return res.status(400).json({
-          message: 'property exam_ids (array) is required',
+          message: 'property laboratory_ids (array) is required',
         });
       }
 
-      const laboratory = await Laboratory.findOne({
+      const exam = await Exam.findOne({
         where: {
           id,
           status: true,
         },
       });
 
-      if (!laboratory) {
-        return res
-          .status(404)
-          .json({ message: 'laboratory not found' });
+      if (!exam) {
+        return res.status(404).json({ message: 'exam not found' });
       }
 
-      if (exam_ids.length === 0) {
-        await laboratory.setExams([]);
+      if (laboratory_ids.length === 0) {
+        await exam.setLaboratories([]);
 
         return res.status(200).json({
-          message: `laboratory ${laboratory.name} updated with 0 exams`,
+          message: `exam ${exam.name} associated with 0 laboratories`,
         });
       }
 
-      const examsToSet = [];
-      for (const examId of [...new Set(exam_ids)].filter(
+      const laboratoriesToSet = [];
+      for (const labId of [...new Set(laboratory_ids)].filter(
         (el) => typeof el === 'number',
       )) {
-        const exam = await Exam.findOne({
+        const laboratory = await Laboratory.findOne({
           where: {
-            id: examId,
+            id: labId,
             status: true,
           },
         });
 
-        if (exam) {
-          examsToSet.push(examId);
+        if (laboratory) {
+          laboratoriesToSet.push(labId);
         }
       }
 
-      if (examsToSet.length === 0) {
+      if (laboratoriesToSet.length === 0) {
         return res.status(400).json({
-          message: 'no valid exams to add',
+          message: 'no valid laboratories to associate',
         });
       }
 
-      await laboratory.setExams(examsToSet);
+      await exam.setLaboratories(laboratoriesToSet);
 
       return res.status(200).json({
-        message: `laboratory ${laboratory.name} updated with ${examsToSet.length} exams`,
+        message: `exam ${exam.name} associated with ${laboratoriesToSet.length} laboratories`,
       });
     } catch (error) {
       if (error.message) {

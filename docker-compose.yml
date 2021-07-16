@@ -22,7 +22,7 @@ services:
   db:
     image: postgres:9.6
     container_name: db
-    env_file: 
+    env_file:
       - .env
     volumes:
       - dbdata-volume:/var/lib/postgresql/data
