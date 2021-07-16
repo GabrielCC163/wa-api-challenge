@@ -1,4 +1,4 @@
-const { Laboratory } = require("../models");
+const { Laboratory } = require('../models');
 
 module.exports = {
   async store(req, res) {
@@ -6,33 +6,33 @@ module.exports = {
 
     if (!name) {
       return res.status(400).json({
-        message: 'name is required'
-      })
+        message: 'name is required',
+      });
     }
 
     if (!address) {
       return res.status(400).json({
-        message: 'address is required'
-      })
+        message: 'address is required',
+      });
     }
 
     const laboratoryFound = await Laboratory.findOne({
-      where: {name}
+      where: { name },
     });
 
     if (laboratoryFound) {
       return res.status(400).json({
-        message: `laboratory ${laboratoryFound.name} already exists`
+        message: `laboratory ${laboratoryFound.name} already exists`,
       });
     }
 
     try {
       const laboratory = await Laboratory.create({
         name,
-        address
+        address,
       });
 
-      return res.status(201).json(laboratory)
+      return res.status(201).json(laboratory);
     } catch (error) {
       return res.status(500).send(error);
     }
@@ -41,11 +41,13 @@ module.exports = {
   async index(req, res) {
     try {
       const laboratories = await Laboratory.findAll({
-        order: ['name', 'ASC']
+        order: ['name', 'ASC'],
       });
 
       if (!laboratories || laboratories.length === 0) {
-        return res.status(404).json({message: 'no laboratory found'})
+        return res
+          .status(404)
+          .json({ message: 'no laboratory found' });
       }
 
       return res.status(200).json(laboratories);
@@ -61,7 +63,9 @@ module.exports = {
       const laboratory = await Laboratory.findByPk(id);
 
       if (!laboratory) {
-        return res.status(404).json({message: 'laboratory not found'})
+        return res
+          .status(404)
+          .json({ message: 'laboratory not found' });
       }
 
       return res.status(200).json(laboratory);
@@ -77,11 +81,13 @@ module.exports = {
       delete req.body.active;
 
       const laboratoryUpdated = await Laboratory.update(req.body, {
-        where: {id}
-      })
+        where: { id },
+      });
 
       if (!laboratoryUpdated) {
-        return res.status(404).json({message: 'laboratory not found'})
+        return res
+          .status(404)
+          .json({ message: 'laboratory not found' });
       }
 
       return laboratoryUpdated;
@@ -89,12 +95,29 @@ module.exports = {
       return res.status(500).send(error);
     }
   },
-  
+
   async destroy(req, res) {
     try {
-      
+      const { id } = req.params;
+
+      const laboratoryInactivated = await Laboratory.update(
+        {
+          active: false,
+        },
+        {
+          where: { id },
+        },
+      );
+
+      if (!laboratoryInactivated) {
+        return res
+          .status(404)
+          .json({ message: 'laboratory not found' });
+      }
+
+      return res.sendStatus(204);
     } catch (error) {
       return res.status(500).send(error);
     }
-  }
-}
+  },
+};
