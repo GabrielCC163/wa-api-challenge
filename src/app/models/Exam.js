@@ -1,6 +1,6 @@
 module.exports = (sequelize, DataTypes) => {
   const Exam = sequelize.define(
-    'exam',
+    'Exam',
     {
       name: DataTypes.STRING,
       type: DataTypes.STRING,
@@ -8,11 +8,12 @@ module.exports = (sequelize, DataTypes) => {
     },
     {
       tableName: 'exams',
+      timestamps: false,
     },
   );
 
   Exam.associate = (models) => {
-    Exam.belongsToMany(models.laboratory, {
+    Exam.belongsToMany(models.Laboratory, {
       foreignKey: 'exam_id',
       through: 'laboratory_exams',
       as: 'laboratories',

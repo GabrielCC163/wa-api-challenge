@@ -1,6 +1,6 @@
 module.exports = (sequelize, DataTypes) => {
   const Laboratory = sequelize.define(
-    'laboratory',
+    'Laboratory',
     {
       name: DataTypes.STRING,
       address: DataTypes.TEXT('medium'),
@@ -8,11 +8,12 @@ module.exports = (sequelize, DataTypes) => {
     },
     {
       tableName: 'laboratories',
+      timestamps: false,
     },
   );
 
   Laboratory.associate = (models) => {
-    Laboratory.belongsToMany(models.exam, {
+    Laboratory.belongsToMany(models.Exam, {
       foreignKey: 'laboratory_id',
       through: 'laboratory_exams',
       as: 'exams',

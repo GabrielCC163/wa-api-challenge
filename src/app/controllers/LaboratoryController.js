@@ -17,7 +17,7 @@ module.exports = {
     }
 
     const laboratoryFound = await Laboratory.findOne({
-      where: { name },
+      where: { name, address },
     });
 
     if (laboratoryFound) {
@@ -41,7 +41,11 @@ module.exports = {
   async index(req, res) {
     try {
       const laboratories = await Laboratory.findAll({
-        order: ['name', 'ASC'],
+        attributes: {exclude: ['status']},
+        where: {
+          status: true,
+        },
+        order: [['name', 'ASC']],
       });
 
       if (!laboratories || laboratories.length === 0) {
@@ -52,6 +56,10 @@ module.exports = {
 
       return res.status(200).json(laboratories);
     } catch (error) {
+      if (error.message) {
+        return res.status(500).json({message: error.message})
+      }
+      
       return res.status(500).send(error);
     }
   },
@@ -70,6 +78,10 @@ module.exports = {
 
       return res.status(200).json(laboratory);
     } catch (error) {
+      if (error.message) {
+        return res.status(500).json({message: error.message})
+      }
+
       return res.status(500).send(error);
     }
   },
@@ -80,18 +92,24 @@ module.exports = {
 
       delete req.body.active;
 
-      const laboratoryUpdated = await Laboratory.update(req.body, {
-        where: { id },
+      const isUpdated = await Laboratory.update(req.body, {
+        where: { id, status: true },
       });
 
-      if (!laboratoryUpdated) {
+      if (!isUpdated || isUpdated[0] === 0) {
         return res
           .status(404)
           .json({ message: 'laboratory not found' });
       }
 
-      return laboratoryUpdated;
+      const laboratoryUpdated = await Laboratory.findByPk(id);
+
+      return res.status(200).json(laboratoryUpdated);
     } catch (error) {
+      if (error.message) {
+        return res.status(500).json({message: error.message})
+      }
+
       return res.status(500).send(error);
     }
   },
@@ -100,16 +118,13 @@ module.exports = {
     try {
       const { id } = req.params;
 
-      const laboratoryInactivated = await Laboratory.update(
-        {
-          active: false,
-        },
-        {
-          where: { id },
-        },
+      const isInactivated = await Laboratory.update(
+        { status: false },
+        { where: { id, status: true } },
       );
 
-      if (!laboratoryInactivated) {
+      console.log(isInactivated)
+      if (!isInactivated || isInactivated[0] === 0) {
         return res
           .status(404)
           .json({ message: 'laboratory not found' });
@@ -117,6 +132,10 @@ module.exports = {
 
       return res.sendStatus(204);
     } catch (error) {
+      if (error.message) {
+        return res.status(500).json({message: error.message})
+      }
+
       return res.status(500).send(error);
     }
   },

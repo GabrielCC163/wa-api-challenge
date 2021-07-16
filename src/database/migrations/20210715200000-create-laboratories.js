@@ -15,14 +15,13 @@ module.exports = {
       },
       address: {
         type: Sequelize.TEXT('medium'),
-        unique: true,
         allowNull: false,
       },
       status: {
         type: Sequelize.BOOLEAN,
         allowNull: false,
         defaultValue: true,
-      },
+      }
     });
   },
 
