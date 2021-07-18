@@ -1,4 +1,22 @@
-const { Laboratory, Exam } = require('../models');
+const {
+  removeObjectDuplicatesFromArray,
+  checkEveryKeyInArrayObjects,
+  checkIfContainKeysInArrayObjects,
+  cleanArrayObjects,
+} = require('../../utils/ObjectComparator');
+const { Laboratory, Exam, sequelize } = require('../models');
+
+const findLabByNameAndAddress = async (name, address) => {
+  const lab = await Laboratory.findOne({
+    where: { name, address },
+  });
+
+  if (lab) {
+    return lab;
+  }
+
+  return false;
+};
 
 module.exports = {
   async store(req, res) {
@@ -16,9 +34,7 @@ module.exports = {
       });
     }
 
-    const laboratoryFound = await Laboratory.findOne({
-      where: { name, address },
-    });
+    const laboratoryFound = findLabByNameAndAddress(name, address);
 
     if (laboratoryFound) {
       return res.status(400).json({
@@ -45,7 +61,7 @@ module.exports = {
         where: {
           status: true,
         },
-        order: [['name', 'ASC']],
+        order: [['id', 'ASC']],
       });
 
       if (!laboratories || laboratories.length === 0) {
@@ -98,10 +114,25 @@ module.exports = {
   async update(req, res) {
     try {
       const { id } = req.params;
+      const { name, address } = req.body;
 
-      delete req.body.status;
+      if (!name && !address) {
+        return res.status(400).json({
+          message: 'it is required name and / or address to update',
+        });
+      }
 
-      const isUpdated = await Laboratory.update(req.body, {
+      const updateObj = {};
+
+      if (name) {
+        updateObj.name = name;
+      }
+
+      if (address) {
+        updateObj.address = address;
+      }
+
+      const isUpdated = await Laboratory.update(updateObj, {
         where: { id, status: true },
       });
 
@@ -187,6 +218,7 @@ module.exports = {
       }
 
       const examsToSet = [];
+
       for (const examId of [...new Set(exam_ids)].filter(
         (el) => typeof el === 'number',
       )) {
@@ -214,6 +246,171 @@ module.exports = {
         message: `laboratory ${laboratory.name} updated with ${examsToSet.length} exams`,
       });
     } catch (error) {
+      if (error.message) {
+        return res.status(500).json({ message: error.message });
+      }
+
+      return res.status(500).send(error);
+    }
+  },
+
+  async createLaboratories(req, res) {
+    const t = await sequelize.transaction();
+    const { laboratories } = req.body;
+
+    if (!laboratories || !Array.isArray(laboratories)) {
+      return res.status(400).json({
+        message: 'property laboratories (array) is required',
+      });
+    }
+
+    // check if all laboratories have name and address
+    if (
+      !checkEveryKeyInArrayObjects(laboratories, ['name', 'address'])
+    ) {
+      return res.status(400).json({
+        message: 'every laboratory must have name and address',
+      });
+    }
+
+    // remove duplicates and returns only name and address properties
+    let uniqueLabs = removeObjectDuplicatesFromArray(laboratories, [
+      'name',
+      'address',
+    ]);
+
+    uniqueLabs = cleanArrayObjects(uniqueLabs, ['name', 'address']);
+
+    const labsToAdd = [];
+
+    for (const lab of uniqueLabs) {
+      const labExists = await Laboratory.findOne({
+        where: {
+          name: lab.name,
+          address: lab.address,
+        },
+      });
+
+      if (!labExists) {
+        labsToAdd.push(lab);
+      }
+    }
+
+    if (labsToAdd.length === 0) {
+      return res.status(400).json({
+        message: 'the laboratories already exists',
+      });
+    }
+
+    try {
+      const labsAdded = await Laboratory.bulkCreate(labsToAdd, {
+        transaction: t,
+      });
+
+      await t.commit();
+      return res.status(200).json(labsAdded);
+    } catch (error) {
+      await t.rollback();
+
+      if (error.message) {
+        return res.status(500).json({ message: error.message });
+      }
+
+      return res.status(500).send(error);
+    }
+  },
+
+  async updateLaboratories(req, res) {
+    const t = await sequelize.transaction();
+    const { laboratories } = req.body;
+
+    if (!laboratories || !Array.isArray(laboratories)) {
+      return res.status(400).json({
+        message: 'property laboratories (array) is required',
+      });
+    }
+
+    // check if all laboratories have id
+    if (!checkEveryKeyInArrayObjects(laboratories, ['id'])) {
+      return res.status(400).json({
+        message: 'every laboratory must have an id',
+      });
+    }
+
+    // check if all laboratories have either name or address
+    if (
+      !checkIfContainKeysInArrayObjects(laboratories, [
+        'name',
+        'address',
+      ])
+    ) {
+      return res.status(400).json({
+        message: 'every laboratory must have name and / or address',
+      });
+    }
+
+    // remove duplicates
+    let uniqueLabs = removeObjectDuplicatesFromArray(laboratories, [
+      'id',
+    ]);
+
+    uniqueLabs = cleanArrayObjects(uniqueLabs, [
+      'id',
+      'name',
+      'address',
+    ]);
+
+    const labsToUpdate = [];
+
+    for (const lab of uniqueLabs) {
+      const labExists = await Laboratory.findByPk(lab.id);
+
+      if (labExists) {
+        labsToUpdate.push(lab);
+      }
+    }
+
+    if (labsToUpdate.length === 0) {
+      return res.status(400).json({
+        message: 'the laboratories do not exists',
+      });
+    }
+
+    try {
+      const labPromises = [];
+      const labIds = [];
+
+      for (let i = 0; i < labsToUpdate.length; i++) {
+        const labId = labsToUpdate[i].id;
+
+        labIds.push(labId);
+
+        delete labsToUpdate[i].id;
+
+        labPromises.push(
+          Laboratory.update(labsToUpdate[i], {
+            where: {
+              id: labId,
+            },
+            transaction: t,
+          }),
+        );
+      }
+
+      await Promise.all(labPromises);
+
+      await t.commit();
+
+      const labsUpdated = await Laboratory.findAll({
+        where: {
+          id: labIds,
+        },
+      });
+
+      return res.status(200).json(labsUpdated);
+    } catch (error) {
+      await t.rollback();
+
       if (error.message) {
         return res.status(500).json({ message: error.message });
       }

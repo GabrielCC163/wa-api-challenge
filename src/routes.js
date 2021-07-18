@@ -12,10 +12,19 @@ routes.patch('/laboratories/:id', LaboratoryController.associate);
 
 routes.post('/exams', ExamController.store);
 routes.get('/exams', ExamController.index);
-routes.get('/exams/:id', ExamController.show);
+routes.get('/exams/:name', ExamController.show);
 routes.put('/exams/:id', ExamController.update);
 routes.delete('/exams/:id', ExamController.destroy);
 routes.patch('/exams/:id', ExamController.associate);
+
+routes.post(
+  '/bulk/laboratories',
+  LaboratoryController.createLaboratories,
+);
+routes.put(
+  '/bulk/laboratories',
+  LaboratoryController.updateLaboratories,
+);
 
 routes.get('/', (req, res) => {
   return res.status(200).json({

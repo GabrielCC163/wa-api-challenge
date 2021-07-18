@@ -17,7 +17,7 @@ module.exports = {
     }
 
     const examFound = await Exam.findOne({
-      where: { name, type },
+      where: { name },
     });
 
     if (examFound) {
@@ -45,7 +45,7 @@ module.exports = {
         where: {
           status: true,
         },
-        order: [['name', 'ASC']],
+        order: [['id', 'ASC']],
       });
 
       if (!exams || exams.length === 0) {
@@ -64,11 +64,11 @@ module.exports = {
 
   async show(req, res) {
     try {
-      const { id } = req.params;
+      const { name } = req.params;
 
       const exam = await Exam.findOne({
         where: {
-          id,
+          name,
           status: true,
         },
         include: {
@@ -95,9 +95,25 @@ module.exports = {
     try {
       const { id } = req.params;
 
-      delete req.body.status;
+      const { name, type } = req.body;
 
-      const isUpdated = await Exam.update(req.body, {
+      if (!name && !type) {
+        return res.status(400).json({
+          message: 'it is required name and / or type to update',
+        });
+      }
+
+      const updateObj = {};
+
+      if (name) {
+        updateObj.name = name;
+      }
+
+      if (type) {
+        updateObj.type = type;
+      }
+
+      const isUpdated = await Exam.update(updateObj, {
         where: { id, status: true },
       });
 
