@@ -3,7 +3,7 @@ require('dotenv').config({
 });
 
 if (process.env.NODE_ENV === 'production') {
-  process.env.DB_HOST = process.env.DATABASE_URL
+  // process.env.DB_HOST = process.env.DATABASE_URL
 }
 
 module.exports = {
