@@ -6,9 +6,9 @@ const {
 } = require('../../utils/ObjectComparator');
 const { Laboratory, Exam, sequelize } = require('../models');
 
-const findLabByNameAndAddress = async (name, address) => {
+const findActiveLabByNameAndAddress = async (name, address) => {
   const lab = await Laboratory.findOne({
-    where: { name, address },
+    where: { name, address, status: true },
   });
 
   if (lab) {
@@ -34,7 +34,10 @@ module.exports = {
       });
     }
 
-    const laboratoryFound = findLabByNameAndAddress(name, address);
+    const laboratoryFound = findActiveLabByNameAndAddress(
+      name,
+      address,
+    );
 
     if (laboratoryFound) {
       return res.status(400).json({
@@ -142,9 +145,9 @@ module.exports = {
           .json({ message: 'laboratory not found' });
       }
 
-      const laboratoryUpdated = await Laboratory.findByPk(id);
+      const updatedLab = await Laboratory.findByPk(id);
 
-      return res.status(200).json(laboratoryUpdated);
+      return res.status(200).json(updatedLab);
     } catch (error) {
       if (error.message) {
         return res.status(500).json({ message: error.message });
@@ -264,6 +267,12 @@ module.exports = {
       });
     }
 
+    if (laboratories.length === 0) {
+      return res.status(400).json({
+        message: 'empty array (laboratories)',
+      });
+    }
+
     // check if all laboratories have name and address
     if (
       !checkEveryKeyInArrayObjects(laboratories, ['name', 'address'])
@@ -273,23 +282,22 @@ module.exports = {
       });
     }
 
-    // remove duplicates and returns only name and address properties
+    // remove duplicates
     let uniqueLabs = removeObjectDuplicatesFromArray(laboratories, [
       'name',
       'address',
     ]);
 
+    // returns only name and address properties
     uniqueLabs = cleanArrayObjects(uniqueLabs, ['name', 'address']);
 
     const labsToAdd = [];
 
     for (const lab of uniqueLabs) {
-      const labExists = await Laboratory.findOne({
-        where: {
-          name: lab.name,
-          address: lab.address,
-        },
-      });
+      const labExists = await findActiveLabByNameAndAddress(
+        lab.name,
+        lab.address,
+      );
 
       if (!labExists) {
         labsToAdd.push(lab);
@@ -401,13 +409,75 @@ module.exports = {
 
       await t.commit();
 
-      const labsUpdated = await Laboratory.findAll({
+      const updatedLabs = await Laboratory.findAll({
         where: {
           id: labIds,
         },
       });
 
-      return res.status(200).json(labsUpdated);
+      return res.status(200).json(updatedLabs);
+    } catch (error) {
+      await t.rollback();
+
+      if (error.message) {
+        return res.status(500).json({ message: error.message });
+      }
+
+      return res.status(500).send(error);
+    }
+  },
+
+  async removeLaboratories(req, res) {
+    const t = await sequelize.transaction();
+
+    const { laboratory_ids } = req.body;
+
+    if (!laboratory_ids || !Array.isArray(laboratory_ids)) {
+      return res.status(400).json({
+        message:
+          'property laboratory_ids (array of integers) is required',
+      });
+    }
+
+    if (laboratory_ids.length === 0) {
+      return res.status(400).json({
+        message: 'empty array (laboratory_ids [array of integers])',
+      });
+    }
+
+    const labIds = [...new Set(laboratory_ids)].filter(
+      (el) => typeof el === 'number',
+    );
+
+    if (labIds.length === 0) {
+      return res.status(400).json({
+        message: 'no laboratories found to delete',
+      });
+    }
+
+    try {
+      await Laboratory.update(
+        {
+          status: false,
+        },
+        {
+          where: {
+            id: labIds,
+          },
+          transaction: t,
+        },
+      );
+
+      await sequelize.query(
+        `DELETE FROM laboratory_exams WHERE laboratory_id in (${labIds.join(
+          ',',
+        )})`,
+        { transaction: t },
+      );
+
+      await t.commit();
+
+      return res.sendStatus(204);
     } catch (error) {
       await t.rollback();
 

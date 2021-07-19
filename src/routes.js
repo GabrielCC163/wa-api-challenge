@@ -25,6 +25,10 @@ routes.put(
   '/bulk/laboratories',
   LaboratoryController.updateLaboratories,
 );
+routes.delete(
+  '/bulk/laboratories',
+  LaboratoryController.removeLaboratories,
+);
 
 routes.get('/', (req, res) => {
   return res.status(200).json({

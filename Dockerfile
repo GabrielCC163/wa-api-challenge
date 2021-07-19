@@ -1,4 +1,4 @@
-FROM node:alpine
+FROM node:lts-alpine
 
 WORKDIR /usr/src/app/
 
@@ -8,4 +8,8 @@ RUN yarn install
 
 COPY . .
 
-CMD ["yarn", "start"]
+COPY ./entrypoint.sh /entrypoint.sh
+
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT [ "/entrypoint.sh" ]
