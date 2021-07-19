@@ -2,7 +2,7 @@ require('dotenv').config({
   path: process.env.NODE_ENV === 'test' ? '.env.test' : '.env',
 });
 
-const sslConfig = {};
+let sslConfig = {};
 
 if (process.env.NODE_ENV === 'production') {
   // heroku run npx sequelize-cli db:migrate
