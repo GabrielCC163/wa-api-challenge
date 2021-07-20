@@ -7,6 +7,7 @@
 ## **Local Initialization**
 
 ### Run the commands below only on first startup
+
 ```
 docker-compose up -d db
 

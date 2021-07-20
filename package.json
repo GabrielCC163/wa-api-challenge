@@ -18,7 +18,9 @@
     "faker": "^5.5.3",
     "jsonwebtoken": "^8.5.1",
     "pg": "^8.6.0",
-    "sequelize": "^6.6.5"
+    "sequelize": "^6.6.5",
+    "swagger-jsdoc": "^6.1.0",
+    "swagger-ui-express": "^4.1.6"
   },
   "devDependencies": {
     "jest": "^27.0.6",

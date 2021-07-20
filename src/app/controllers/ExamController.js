@@ -287,7 +287,7 @@ module.exports = {
       });
 
       await t.commit();
-      return res.status(200).json(examsAdded);
+      return res.status(201).json(examsAdded);
     } catch (error) {
       await t.rollback();
 
@@ -343,7 +343,7 @@ module.exports = {
     }
 
     if (examsToUpdate.length === 0) {
-      return res.status(400).json({
+      return res.status(404).json({
         message: 'the exams do not exists',
       });
     }

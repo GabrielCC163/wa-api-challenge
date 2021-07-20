@@ -34,7 +34,7 @@ module.exports = {
       });
     }
 
-    const laboratoryFound = findActiveLabByNameAndAddress(
+    const laboratoryFound = await findActiveLabByNameAndAddress(
       name,
       address,
     );
@@ -316,7 +316,7 @@ module.exports = {
       });
 
       await t.commit();
-      return res.status(200).json(labsAdded);
+      return res.status(201).json(labsAdded);
     } catch (error) {
       await t.rollback();
 
@@ -379,7 +379,7 @@ module.exports = {
     }
 
     if (labsToUpdate.length === 0) {
-      return res.status(400).json({
+      return res.status(404).json({
         message: 'the laboratories do not exists',
       });
     }
