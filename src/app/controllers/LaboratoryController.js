@@ -4,6 +4,7 @@ const {
   checkIfContainKeysInArrayObjects,
   cleanArrayObjects,
 } = require('../../utils/ObjectComparator');
+
 const { Laboratory, Exam, sequelize } = require('../models');
 
 const findActiveLabByNameAndAddress = async (name, address) => {
@@ -450,7 +451,7 @@ module.exports = {
     );
 
     if (labIds.length === 0) {
-      return res.status(400).json({
+      return res.status(404).json({
         message: 'no laboratories found to delete',
       });
     }

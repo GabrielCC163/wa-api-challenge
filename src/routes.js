@@ -15,10 +15,10 @@ const ExamController = require('./app/controllers/ExamController');
  *      name:
  *        type: "string"
  *        example: "Lab A"
- *      address: 
+ *      address:
  *        type: "string"
  *        example: "Jack Street 123"
- * 
+ *
  *  Exam:
  *    type: "object"
  *    required:
@@ -28,10 +28,10 @@ const ExamController = require('./app/controllers/ExamController');
  *      name:
  *        type: "string"
  *        example: "Exam A"
- *      type: 
+ *      type:
  *        type: "string"
- *        example: "A1"
- * 
+ *        example: "type A1"
+ *
  *  ExamIds:
  *    type: "object"
  *    required:
@@ -40,7 +40,7 @@ const ExamController = require('./app/controllers/ExamController');
  *      exam_ids:
  *        type: "array"
  *        example: [1, 2, 3]
- * 
+ *
  *  LabIds:
  *    type: "object"
  *    required:
@@ -49,7 +49,7 @@ const ExamController = require('./app/controllers/ExamController');
  *      laboratory_ids:
  *        type: "array"
  *        example: [1, 2, 3]
- * 
+ *
  *  Laboratories:
  *    type: "object"
  *    required:
@@ -58,7 +58,7 @@ const ExamController = require('./app/controllers/ExamController');
  *      laboratories:
  *        type: "array"
  *        example: [{name: "Laboratory A", address: "Street One"}, {name: "Laboratory B", address: "Street Two"}]
- * 
+ *
  *  UpdateLaboratories:
  *    type: "object"
  *    required:
@@ -67,6 +67,24 @@ const ExamController = require('./app/controllers/ExamController');
  *      laboratories:
  *        type: "array"
  *        example: [{id: 1, name: "new name"}, {id: 2, address: "new address"}]
+ *
+ *  Exams:
+ *    type: "object"
+ *    required:
+ *      - "exams"
+ *    properties:
+ *      exams:
+ *        type: "array"
+ *        example: [{name: "Exam A1", type: "A1"}, {name: "Exam B2", type: "B2"}]
+ *
+ *  UpdateExams:
+ *    type: "object"
+ *    required:
+ *      - "exams"
+ *    properties:
+ *      exams:
+ *        type: "array"
+ *        example: [{id: 1, name: "new name"}, {id: 2, type: "new type"}]
  */
 
 /**
@@ -166,7 +184,7 @@ routes.put('/laboratories/:id', LaboratoryController.update);
  * @swagger
  * /laboratories/{id}:
  *  delete:
- *    summary: Define "status" to "false" in one specific active laboratory, remove associated exams.
+ *    summary: Defines "status" to "false" in one specific active laboratory, removes associated exams.
  *    parameters:
  *      - name: id
  *        in: path
@@ -188,6 +206,7 @@ routes.delete('/laboratories/:id', LaboratoryController.destroy);
  * /laboratories/{id}:
  *  patch:
  *    summary: Add / remove exams in a Laboratory
+ *    description: If the request comes with IDs 1 and 2 and then comes with only ID 2, so the first time the laboratory was associated with exam 1 and exam 2. The second time, exam 1 was removed from the association.
  *    consumes:
  *      - "application/json"
  *    produces:
@@ -312,7 +331,7 @@ routes.put('/exams/:id', ExamController.update);
  * @swagger
  * /exams/{id}:
  *  delete:
- *    summary: Define "status" to "false" in one specific active exam, remove associated laboratories.
+ *    summary: Defines "status" to "false" in one specific active exam, removes associated laboratories.
  *    parameters:
  *      - name: id
  *        in: path
@@ -334,6 +353,7 @@ routes.delete('/exams/:id', ExamController.destroy);
  * /exams/{id}:
  *  patch:
  *    summary: Associate / disassociate an exam with laboratories
+ *    description: If the request comes with IDs 1 and 2 and then comes with only 2, so the first time the exam was associated with lab 1 and lab 2. The second time, lab 1 was removed from the association.
  *    consumes:
  *      - "application/json"
  *    produces:
@@ -419,23 +439,114 @@ routes.put(
   LaboratoryController.updateLaboratories,
 );
 
+/**
+ * @swagger
+ * /bulk/laboratories:
+ *  delete:
+ *    summary: Defines "status" to "false" in more then one laboratory, removes associated exams.
+ *    consumes:
+ *      - "application/json"
+ *    produces:
+ *      - "application/json"
+ *    parameters:
+ *      - in: "body"
+ *        name: "body"
+ *        required: true
+ *        schema:
+ *          $ref: "#/definitions/LabIds"
+ *    responses:
+ *      '204':
+ *        description: Laboratories removed with success.
+ *      '400':
+ *        description: property laboratory_ids (array of integers) is required / empty array (laboratory_ids [array of integers])
+ *      '404':
+ *        description: no laboratories found to delete.
+ *      '500':
+ *        description: Internal Server Error.
+ */
 routes.delete(
   '/bulk/laboratories',
   LaboratoryController.removeLaboratories,
 );
 
-routes.post(
-  '/bulk/exams',
-  ExamController.createExams,
-);
-routes.put(
-  '/bulk/exams',
-  ExamController.updateExams,
-);
-routes.delete(
-  '/bulk/exams',
-  ExamController.removeExams,
-);
+/**
+ * @swagger
+ * /bulk/exams:
+ *  post:
+ *    summary: Create more then one exam
+ *    consumes:
+ *      - "application/json"
+ *    produces:
+ *      - "application/json"
+ *    parameters:
+ *      - in: "body"
+ *        name: "body"
+ *        required: true
+ *        schema:
+ *          $ref: "#/definitions/Exams"
+ *    responses:
+ *      '201':
+ *        description: List of created exam objects.
+ *      '400':
+ *        description: property exams (array) is required / empty array (exams) / every exam must have name and type / the exams already exists
+ *      '500':
+ *        description: Internal Server Error.
+ */
+routes.post('/bulk/exams', ExamController.createExams);
+
+/**
+ * @swagger
+ * /bulk/exams:
+ *  put:
+ *    summary: Updates more then one exam
+ *    consumes:
+ *      - "application/json"
+ *    produces:
+ *      - "application/json"
+ *    parameters:
+ *      - in: "body"
+ *        name: "body"
+ *        required: true
+ *        schema:
+ *          $ref: "#/definitions/UpdateExams"
+ *    responses:
+ *      '200':
+ *        description: List of updated exam objects.
+ *      '400':
+ *        description: property exams (array) is required / every exam must have an id / every exam must have name or type
+ *      '404':
+ *        description: the exams do not exists.
+ *      '500':
+ *        description: Internal Server Error.
+ */
+routes.put('/bulk/exams', ExamController.updateExams);
+
+/**
+ * @swagger
+ * /bulk/exams:
+ *  delete:
+ *    summary: Defines "status" to "false" in more then one exa,, removes associated laboratories.
+ *    consumes:
+ *      - "application/json"
+ *    produces:
+ *      - "application/json"
+ *    parameters:
+ *      - in: "body"
+ *        name: "body"
+ *        required: true
+ *        schema:
+ *          $ref: "#/definitions/ExamIds"
+ *    responses:
+ *      '204':
+ *        description: Exams removed with success.
+ *      '400':
+ *        description: property exam_ids (array of integers) is required / empty array (exam_ids [array of integers])
+ *      '404':
+ *        description: no exams found to delete.
+ *      '500':
+ *        description: Internal Server Error.
+ */
+routes.delete('/bulk/exams', ExamController.removeExams);
 
 routes.get('/', (req, res) => {
   return res.status(200).json({

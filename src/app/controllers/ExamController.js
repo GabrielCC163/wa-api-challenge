@@ -1,4 +1,11 @@
-const { Exam, Laboratory } = require('../models');
+const {
+  removeObjectDuplicatesFromArray,
+  checkEveryKeyInArrayObjects,
+  checkIfContainKeysInArrayObjects,
+  cleanArrayObjects,
+} = require('../../utils/ObjectComparator');
+
+const { sequelize, Exam, Laboratory } = require('../models');
 
 module.exports = {
   async store(req, res) {
@@ -413,7 +420,7 @@ module.exports = {
     );
 
     if (examIds.length === 0) {
-      return res.status(400).json({
+      return res.status(404).json({
         message: 'no exams found to delete',
       });
     }
